@@ -1,0 +1,220 @@
+---
+title: "Forecast daily bike rental demand using time series models"
+author: "Sonam Tenzin"
+date: "2025-01-02"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r data}
+summary(data_day)
+summary(data_hour)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+# Task One: Load and explore the data
+
+### Importing file
+#day_data<-read.csv("D:/Desktop/Data_Analyst/Project/day.csv")
+#hour_data<-read.csv("D:/Desktop/Data_Analyst/Project/hour.csv")
+
+
+
+
+```{r}
+## Import required packages
+install.packages("dplyr")
+install.packages("forecast")
+install.packages("ggplot2")
+install.packages("zoo")
+
+```
+
+
+## Describe and explore the data
+
+```{r}
+# Check structure and summary
+str(day_data)
+summary(day_data)
+
+str(hour_data)
+summary(hour_data)
+```
+
+
+
+# Task Two: Create interactive time series plots
+
+```{r}
+
+data_hour$cnt_smoothed <- stats::filter(data_hour$cnt, filter = rep(1/7, 7), sides = 2)
+
+# Plot the smoothed data time series
+ggplot(data_hour, aes(x = dteday)) + 
+  geom_line(aes(y = cnt), color = "blue", alpha = 0.5) + 
+  geom_line(aes(y = cnt_smoothed), color = "red", size = 1) + 
+  labs(
+    x = "Time",
+    y = "Count",
+    title = "Time Series with Exponential Smoothing"
+  )
+
+# column is in Date format
+data_day$dteday <- as.Date(data_day$dteday)
+
+# Plot the data with moving average smoothing
+ggplot(data_day, aes(x = dteday)) + 
+  geom_line(aes(y = cnt), color = "blue", alpha = 0.5) + 
+  geom_line(aes(y = cnt_smoothed), color = "red", size = 1) + 
+  labs(
+    x = "Date",
+    y = "Count",
+    title = "Time Series with Moving Average Smoothing (data_day)"
+  )
+
+```
+
+
+
+
+# Task Three: Smooth time series data
+
+```{r}
+data_hour$cnt_smoothed <- stats::filter(data_hour$cnt, filter = rep(1/7, 7), sides = 2)
+
+# Plot the smoothed data time series
+ggplot(data_hour, aes(x = dteday)) + 
+  geom_line(aes(y = cnt), color = "blue", alpha = 0.5) + 
+  geom_line(aes(y = cnt_smoothed), color = "red", size = 1) + 
+  labs(
+    x = "Time",
+    y = "Count",
+    title = "Time Series with Exponential Smoothing"
+  )
+
+# column is in Date format
+data_day$dteday <- as.Date(data_day$dteday)
+
+# Plot the data with moving average smoothing
+ggplot(data_day, aes(x = dteday)) + 
+  geom_line(aes(y = cnt), color = "blue", alpha = 0.5) + 
+  geom_line(aes(y = cnt_smoothed), color = "red", size = 1) + 
+  labs(
+    x = "Date",
+    y = "Count",
+    title = "Time Series with Moving Average Smoothing (data_day)"
+  )
+
+```
+
+
+
+# Task Four: Decompse and access the stationarity of time series data
+
+```{r}
+library(zoo)
+data_day$cnt <- zoo::na.approx(data_day$cnt)
+
+# Create time series object again
+data_day_ts <- ts(data_day$cnt, frequency = 365, start = c(2011, 1))
+
+# Forward fill (replace NA with previous value)
+data_day$cnt <- zoo::na.locf(data_day$cnt)
+
+# Backward fill (replace NA with next value)
+data_day$cnt <- zoo::na.locf(data_day$cnt, fromLast = TRUE)
+
+# Decompose the cleaned time series
+decomposed_data <- decompose(data_day_ts)
+plot(decomposed_data)
+```
+
+
+
+# Task Five: Fit and forecast time series data using ARIMA models
+
+```{r}
+adf.test(data_day_ts)
+
+# Fit the ARIMA model to the time series
+arima_model <- auto.arima(data_day_ts)
+
+# View the fitted model
+summary(arima_model)
+
+# Forecast the next 10 periods
+forecasted_values <- forecast(arima_model, h = 10)
+
+# View the forecasted values
+print(forecasted_values)
+
+# Plot the forecast
+plot(forecasted_values)
+
+# Forecasted values
+forecasted_values$mean
+
+# Lower and upper bounds of the forecast confidence interval
+forecasted_values$lower
+forecasted_values$upper
+
+# Perform Ljung-Box test for residuals
+Box.test(residuals(arima_model), lag = 25, type = "Ljung-Box")
+
+adf.test(data_day_ts)
+
+# Fit the ARIMA model to the time series
+arima_model <- auto.arima(data_day_ts)
+
+# View the fitted model
+summary(arima_model)
+
+# Forecast the next 10 periods
+forecasted_values <- forecast(arima_model, h = 10)
+
+# View the forecasted values
+print(forecasted_values)
+
+# Plot the forecast
+plot(forecasted_values)
+
+# Forecasted values
+forecasted_values$mean
+
+# Lower and upper bounds of the forecast confidence interval
+forecasted_values$lower
+forecasted_values$upper
+
+# Perform Ljung-Box test for residuals
+Box.test(residuals(arima_model), lag = 25, type = "Ljung-Box")
+
+
+```
+
+
+
+# Task Six: Findings and Conclusions
+
+# Firstly data has been cleaned by using box plot and has removed outliers.
+#Therefore, we can conclude that the time series of data_hour is stationary. and not stationary for data_dayr. So differencing is necessary for day data to be stationary for arima model to predict future trends correctly.
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
